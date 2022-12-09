@@ -2,30 +2,15 @@ const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const security = require('../security/auth');
+const User = require('../Models/User');
 
-class User {
-    constructor(username, password) {
-        this.username = username;
-        this.password = password;
-    }
-    getUsername() {
-        return this.username;
-    }
-    getPassword() {
-        return this.password;
-    }
-    setUsername(username) {
-        this.username = username;
-    }
-    setPassword(password) {
-        this.password = password;
-    }
-}
 
 users = [];
 
 function findUser(name) {
-    if (this.users.find(user => user.getUsername() === name)) {
+    if (User.findOne({ username: name })) {
+        console.log(User.findOne({ username: name }))
         return true;
     } else return false;
 }
@@ -40,14 +25,20 @@ router.post('/signup', async function(req, res, next) {
           
         if (!findUser(username)) {
             hashed_password = await bcrypt.hash(password,10);
-            this.users.push(new User(username, hashed_password));
-            console.log(hashed_password);
-            console.log("User Created");
             let token = jwt.sign({ data: username  }, 'secret');
-               
-          
-            res.status(200).json({message:"Crée avec succés ", token:token}); 
-                 
+            
+           
+            const user = new User({
+                username: username,
+                password: hashed_password,
+                pokemons:[]
+            })
+            const newUser = await user.save()
+            res.status(201).json(newUser)   
+              
+                 console.log("User Created");
+
+                 res.status(200).json({message:"Crée avec succés ", token:token});
         } else {
             res.status(403).json({message:"User already Exists!! "}); 
         }     
@@ -93,5 +84,13 @@ router.get('/usersList', async function(req, res, next) {
         res.status(404).json({message:error}); 
     }
 });
-
+router.post('/tokensignin', async function(req, res, next) {
+    try {
+        let {token} = req.body;
+           security.verifyToken(token);
+    }
+     catch (error) { 
+            res.status(404).json({message:error}); 
+        }
+});
 module.exports = router;
